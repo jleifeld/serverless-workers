@@ -238,6 +238,11 @@ INFERENCE_SCHEMA = {
         'required': False,
         'default': 1
     },
+    'batch_count': {
+        'type': int,
+        'required': False,
+        'default': 1
+    },
     'n_iter': {
         'type': int,
         'required': False,
@@ -344,12 +349,31 @@ S3_SCHEMA = {
 #                              Automatic Functions                             #
 # ---------------------------------------------------------------------------- #
 def run_inference(inference_request):
-    '''
-    Run inference on a request.
-    '''
-    response = automatic_session.post(url='http://127.0.0.1:3000/sdapi/v1/txt2img',
-                                      json=inference_request, timeout=1800)
-    return response.json()
+    inference_request_without_batch_count = inference_request.copy()
+    del inference_request_without_batch_count['batch_count']
+
+    image_results = {
+        'images': [],
+        'parameters': {},
+        'info': ''
+    }
+
+    for i in range(inference_request['batch_count']):
+        '''
+        Run inference on a request.
+        '''
+        response = automatic_session.post(url='http://127.0.0.1:3000/sdapi/v1/txt2img',
+                                    json=inference_request_without_batch_count, timeout=1800)
+        jsonResponse = response.json()
+
+        for image in jsonResponse['images']:
+            image_results['images'].append(image)
+        image_results['parameters'] = jsonResponse['parameters']
+        image_results['info'] = jsonResponse['info']
+    
+    return image_results
+
+    
 
 def run_upscale(base64_image: str):
     print('Running upscale')
