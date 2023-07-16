@@ -11,6 +11,9 @@ import base64
 import requests
 import subprocess
 from requests.adapters import HTTPAdapter, Retry
+import boto3
+import boto3.session
+from botocore.config import Config
 
 from PIL import Image
 
@@ -30,7 +33,12 @@ automatic_session.mount('http://', HTTPAdapter(max_retries=retries))
 #                                    Schemas                                   #
 # ---------------------------------------------------------------------------- #
 TRAIN_SCHEMA = {
-    'data_url': {
+    'skip_training': {
+        'type': bool,
+        'required': False,
+        'default': False
+    },
+    'project_id': {
         'type': str,
         'required': True
     },
@@ -340,7 +348,22 @@ def run_inference(inference_request):
     Run inference on a request.
     '''
     response = automatic_session.post(url='http://127.0.0.1:3000/sdapi/v1/txt2img',
-                                      json=inference_request, timeout=600)
+                                      json=inference_request, timeout=1800)
+    return response.json()
+
+def run_upscale(base64_image: str):
+    print('Running upscale')
+
+    '''
+    Run upscale on a request.
+    '''
+    response = automatic_session.post(url='http://127.0.0.1:3000/sdapi/v1/extra-single-image',
+                                      json={
+                                          'resize_mode': 0,
+                                          'upscaling_resize': 4,
+                                          'upscaler_1': '4x-UltraSharp',
+                                          'image': base64_image
+                                      }, timeout=1800)
     return response.json()
 
 
@@ -385,10 +408,50 @@ def handler(job):
             return {"error": validated_s3_config['errors']}
         s3_config = validated_s3_config['validated_input']
 
-    # -------------------------- Download Training Data -------------------------- #
-    downloaded_input = rp_download.file(train_input['data_url'])
+    if 's3Config' in job:
+        # Create S3 client
+        temp_bucket_session = boto3.session.Session();
+
+        temp_boto_client = temp_bucket_session.client(
+            's3',
+            endpoint_url=s3_config['endpointUrl'],
+            aws_access_key_id=s3_config['accessId'],
+            aws_secret_access_key=s3_config['accessSecret'],
+            config=Config(
+                signature_version='s3v4',
+                retries={
+                    'max_attempts': 3,
+                    'mode': 'standard'
+                }
+            )
+        )
+
+    # ---------- Download Training Data from S3 in the projectId folder --------- #
+    # Create input_images directory
+    print(f"Creating job_files/{job['id']}/input_images")
+    os.makedirs(f"job_files/{job['id']}/input_images", exist_ok=True)
+
+    if 's3Config' in job:
+        allFiles = temp_boto_client.list_objects(
+            Bucket=s3_config['bucketName'],
+            Prefix=f"projects/{train_input['project_id']}/input_images"
+        )
+
+        print('download all project files from s3')
+        if 'Contents' in allFiles:
+            for file in allFiles['Contents']:
+                temp_boto_client.download_file(
+                    Bucket=s3_config['bucketName'],
+                    Key=file['Key'],
+                    Filename=f"job_files/{job['id']}/input_images/{file['Key'].split('/')[-1]}"
+                )
+    
+    downloaded_input = {
+        'extracted_path': f"job_files/{job['id']}/input_images"
+    }
 
     # Make clean data directory
+    print('making clean data directory')
     allowed_extensions = [".jpg", ".jpeg", ".png"]
     flat_directory = f"job_files/{job['id']}/clean_data"
     os.makedirs(flat_directory, exist_ok=True)
@@ -396,14 +459,17 @@ def handler(job):
     for root, dirs, files in os.walk(downloaded_input['extracted_path']):
         for file in files:
             file_path = os.path.join(root, file)
+            print('file_path', file_path)
             if os.path.splitext(file_path)[1].lower() in allowed_extensions:
+                print('copying', os.path.join(downloaded_input['extracted_path'], file_path))
                 shutil.copy(
-                    os.path.join(downloaded_input['extracted_path'], file_path),
+                    os.path.join(file_path),
                     flat_directory
                 )
 
     # Rename the files to the concept name, if provided.
     if train_input['concept_name'] is not None:
+        print('renaming files to the concept name')
         concept_images = os.listdir(flat_directory)
         for index, image in enumerate(concept_images):
             file_type = image.split(".")[-1]
@@ -423,51 +489,70 @@ def handler(job):
                                 train_input['ckpt_link'], train_input['hf_token'])
 
     # ----------------------------------- Train ---------------------------------- #
-    dump_only_textenc(
-        model_name=model_name,
-        concept_dir=flat_directory,
-        ouput_dir=f"job_files/{job['id']}/model",
-        training_steps=train_input['text_steps'],
-        PT="",
-        seed=train_input['text_seed'],
-        batch_size=train_input['text_batch_size'],
-        resolution=train_input['text_resolution'],
-        precision="fp16",
-        learning_rate=train_input['text_learning_rate'],
-        lr_scheduler=train_input['text_lr_scheduler'],
-        enable_adam=train_input['text_8_bit_adam'],
-        pndm_scheduler=train_input['pndm_scheduler']
-    )
+    if train_input['skip_training'] == False:
+        dump_only_textenc(
+            model_name=model_name,
+            concept_dir=flat_directory,
+            ouput_dir=f"job_files/{job['id']}/model",
+            training_steps=train_input['text_steps'],
+            PT="",
+            seed=train_input['text_seed'],
+            batch_size=train_input['text_batch_size'],
+            resolution=train_input['text_resolution'],
+            precision="fp16",
+            learning_rate=train_input['text_learning_rate'],
+            lr_scheduler=train_input['text_lr_scheduler'],
+            enable_adam=train_input['text_8_bit_adam'],
+            pndm_scheduler=train_input['pndm_scheduler']
+        )
 
-    train_only_unet(
-        stp=500,
-        SESSION_DIR="TEST_OUTPUT",
-        model_name=model_name,
-        INSTANCE_DIR=flat_directory,
-        OUTPUT_DIR=f"job_files/{job['id']}/model",
-        offset_noise=train_input['offset_noise'],
-        PT="",
-        seed=train_input['unet_seed'],
-        batch_size=train_input['unet_batch_size'],
-        resolution=train_input['unet_resolution'],
-        precision="fp16",
-        num_train_epochs=train_input['unet_epochs'],
-        learning_rate=train_input['unet_learning_rate'],
-        lr_scheduler=train_input['unet_lr_scheduler'],
-        enable_adam=train_input['unet_8_bit_adam'],
-        pndm_scheduler=train_input['pndm_scheduler']
-    )
+        train_only_unet(
+            stp=500,
+            SESSION_DIR="TEST_OUTPUT",
+            model_name=model_name,
+            INSTANCE_DIR=flat_directory,
+            OUTPUT_DIR=f"job_files/{job['id']}/model",
+            offset_noise=train_input['offset_noise'],
+            PT="",
+            seed=train_input['unet_seed'],
+            batch_size=train_input['unet_batch_size'],
+            resolution=train_input['unet_resolution'],
+            precision="fp16",
+            num_train_epochs=train_input['unet_epochs'],
+            learning_rate=train_input['unet_learning_rate'],
+            lr_scheduler=train_input['unet_lr_scheduler'],
+            enable_adam=train_input['unet_8_bit_adam'],
+            pndm_scheduler=train_input['pndm_scheduler']
+        )
 
-    # Convert to CKPT
-    diffusers_to_ckpt = subprocess.Popen([
-        "python", "/src/diffusers/scripts/convertosdv2.py",
-        "--fp16",
-        f"/src/job_files/{job['id']}/model",
-        f"/src/job_files/{job['id']}/{job['id']}.ckpt"
-    ])
-    diffusers_to_ckpt.wait()
+        # Convert to CKPT
+        diffusers_to_ckpt = subprocess.Popen([
+            "python", "/src/diffusers/scripts/convertosdv2.py",
+            "--fp16",
+            f"/src/job_files/{job['id']}/model",
+            f"/src/job_files/{job['id']}/{job['id']}.ckpt"
+        ])
+        diffusers_to_ckpt.wait()
 
-    trained_ckpt = f"/src/job_files/{job['id']}/{job['id']}.ckpt"
+        trained_ckpt = f"/src/job_files/{job['id']}/{job['id']}.ckpt"
+
+        # ------------------------------- Upload ckpt Files ------------------------------- #
+        if 's3Config' in job:
+            # Upload the checkpoint file
+            ckpt_url = rp_upload.file(f"{job['id']}.ckpt", trained_ckpt, s3_config)
+            job_output['train']['checkpoint_url'] = ckpt_url
+
+    else:
+        # Convert to CKPT
+        diffusers_to_ckpt = subprocess.Popen([
+            "python", "/src/diffusers/scripts/convertosdv2.py",
+            "--fp16",
+            f"{model_name}",
+            f"{model_name}/base_model.ckpt"
+        ])
+        diffusers_to_ckpt.wait()
+
+        trained_ckpt = f"{model_name}/base_model.ckpt"
 
     # --------------------------------- Inference -------------------------------- #
     if 'inference' in job_input:
@@ -492,19 +577,22 @@ def handler(job):
 
         for top_index, results in enumerate(inference_results):
             for index, image in enumerate(results['images']):
-                image = Image.open(io.BytesIO(base64.b64decode(image.split(",", 1)[0])))
-                image.save(f"job_files/{job['id']}/inference_output/{top_index}-{index}.png")
+                # ------------------------------- Upscale image ------------------------------- #
+                # run_upscale with the base64 encoded image
+                upscaled_image = run_upscale(image)['image']
+                image = Image.open(io.BytesIO(base64.b64decode(upscaled_image.split(",", 1)[0])))
+                image.save(f"job_files/{job['id']}/inference_output/{top_index}-{index}.jpg", "JPEG")
 
-                inference_results[top_index]['images'][index] = rp_upload.upload_image(
-                    job['id'], f"job_files/{job['id']}/inference_output/{top_index}-{index}.png")
+                # ------------------------------- Upload images to S3 ------------------------------- #
+                inference_results[top_index]['images'][index] = rp_upload.file(
+                    # file name
+                    f"projects/{train_input['project_id']}/output_images/{top_index}-{index}.jpg",
+                    # file location
+                    f"job_files/{job['id']}/inference_output/{top_index}-{index}.jpg",
+                    s3_config
+                )
 
         job_output['inference'] = inference_results
-
-    # ------------------------------- Upload Files ------------------------------- #
-    if 's3Config' in job:
-        # Upload the checkpoint file
-        ckpt_url = rp_upload.file(f"{job['id']}.ckpt", trained_ckpt, s3_config)
-        job_output['train']['checkpoint_url'] = ckpt_url
 
     job_output['refresh_worker'] = True  # Refresh the worker after the job is done
     return job_output

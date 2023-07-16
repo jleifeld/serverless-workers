@@ -67,9 +67,9 @@ def downloadmodel_lnk(CKPT_Link):
 def selected_model(Path_to_HuggingFace, CKPT_Link, huggingface_token=None):
     '''
     Either download a model from HuggingFace or from a ckpt link.
-    Or use the original V1.5 model.
+    Or use the experience realistic model.
     '''
-    MODEL_NAME = "/src/stable-diffusion-v1-5"
+    MODEL_NAME = "/src/experience-realistic"
     if Path_to_HuggingFace:
         downloadmodel_hf(Path_to_HuggingFace, huggingface_token)
         MODEL_NAME = "/src/stable-diffusion-custom"

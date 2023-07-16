@@ -42,6 +42,12 @@ RUN apt update && apt install python3.10-venv --yes --no-install-recommends
 RUN apt clean && rm -rf /var/lib/apt/lists/* && \
     echo "en_US.UTF-8 UTF-8" > /etc/locale.gen
 
+RUN cd /workspace/sd/stable-diffusion-webui/models/
+RUN mkdir ESRGAN
+ADD 4x-UltraSharp.pth /workspace/sd/stable-diffusion-webui/models/ESRGAN/
+
+RUN pip install boto3>=1.26.15
+
 ADD dreambooth.py /src/
 ADD custom_model.py /src/
 ADD handler.py /src/

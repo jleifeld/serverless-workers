@@ -1,0 +1,69 @@
+{
+    "input": {
+      "train": {
+        "skip_training": true,
+        "project_id": "clin0ixj000009px01cp38yev",
+        "concept_name": "RWXdoggo",
+        "unet_resolution": 512,
+        "text_learning_rate": 2e-6,
+        "unet_learning_rate": 2e-6,
+        "text_lr_scheduler": "polynomial",
+        "unet_lr_scheduler": "polynomial"
+      },
+      "inference": [
+          {
+              "prompt": "portrait of RWXdoggo, highly detailed face, symmetrical eyes, colorful, flowing hair, fully visible face, powerful, magic, thunders, dramatic lighting, painting, concept art, smooth, sharp focus",
+              "negative_prompt": "blurry, side looking, duplication, lowres, cropped, worst quality, low quality, jpeg artifacts, out of frame, watermark, signature",
+              "sampler_name": "Euler a",
+              "batch_size": 10,
+              "steps": 40,
+              "cfg_scale": 7
+          },
+          {
+              "prompt": "RWXdoggo trapped inside a basket at the park grass detailed at a picnic",
+              "negative_prompt": "lowres, cropped, worst quality, low quality, out of frame, watermark, signature",
+              "sampler_name": "Euler a",
+              "batch_size": 10,
+              "steps": 40,
+              "cfg_scale": 7
+          },
+          {
+            "prompt": "cartoon portrait of RWXdoggo with a detailed cowboy hat, concept art, painting, highly detailed face, symmetrical eyes, colorful, flowing hair, fully visible face, smooth, sharp focus",
+            "negative_prompt": "lowres, cropped, worst quality, low quality, out of frame, watermark, signature",
+            "sampler_name": "Euler a",
+            "batch_size": 10,
+            "steps": 40,
+            "cfg_scale": 8
+          },
+          {
+            "prompt": "a photo of RWXdoggo riding a surfboard in the ocean on a sunny day with a blue sky, fun, motion blur, bokeh, hdr, lens flare, backlight",
+            "negative_prompt": "blur, painting, anime, manga, sketch, beach, cropped, close-up, duplicated, watermark, signature",
+            "sampler_name": "Euler a",
+            "batch_size": 10,
+            "steps": 40,
+            "cfg_scale": 7
+          },
+          {
+            "prompt": "a photo of RWXdoggo in a (space suit:1.1), (spaceship interior:1.1), (seat:0.8) sci-fi, (star wars:0.7), (international space station:0.9), highly detailed, photorealistic, cgi, reflective, trending on artstation, dramatic lighting, moonlight, stars, 35mm, octane render, wide angle",
+            "negative_prompt": "blur, painting, anime, manga, sketch, cropped, car, text, sand, tree, text, watermark, signature",
+            "sampler_name": "Euler a",
+            "batch_size": 10,
+            "enable_hr": true,
+            "hr_scale": 2,
+            "hr_second_pass_steps": 40,
+            "hr_resize_x": 1024,
+            "hr_resize_y": 1024,
+            "width": 512,
+            "height": 512,          
+            "steps": 60,
+            "cfg_scale": 7
+          }
+      ]
+    },
+    "s3Config": {
+        "accessId": "AL1R24L5X0BJSAZ31UUI",
+        "accessSecret": "Y7OvBCwc5MNuOmCGFY4n2jdnv8zqOtvZto2lPyCq",
+        "bucketName": "petsome-ai",
+        "endpointUrl": "https://ams1.vultrobjects.com"
+    }
+}

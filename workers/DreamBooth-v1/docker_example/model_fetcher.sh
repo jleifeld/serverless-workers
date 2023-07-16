@@ -1,8 +1,8 @@
-mkdir /src/stable-diffusion-v1-5
-cd /src/stable-diffusion-v1-5
+mkdir /src/experience-realistic
+cd /src/experience-realistic
 git init
 git lfs install --system --skip-repo
-git remote add -f origin  "https://huggingface.co/runwayml/stable-diffusion-v1-5"
+git remote add -f origin  "https://huggingface.co/jleifeld/experience-realistic"
 git config core.sparsecheckout true
 echo -e "\nscheduler\ntext_encoder\ntokenizer\nunet\nvae\nmodel_index.json\n!vae/diffusion_pytorch_model.bin\n!*.safetensors" > .git/info/sparse-checkout
 git pull origin main

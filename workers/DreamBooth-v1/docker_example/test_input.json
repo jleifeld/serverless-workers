@@ -1,24 +1,39 @@
 {
     "input": {
-        "train": {
-            "data_url": "https://github.com/runpod/serverless-workers/raw/main/Input-Samples/froggy.zip",
-            "text_steps": 2,
-            "unet_epochs": 1,
-            "concept_name": "wixbs"
-        },
-        "inference": [
-            {
-                "prompt": "wixbs grog wearing Batman costume highly detailed face, symmetrical eyes, colorful, flowing hair, fully visible face, powerful, magic, thunders, dramatic lighting, wild, trending on artstation, intricate details, highly detailed, digital painting, concept art, smooth, sharp focus, illustration, art by artgerm and greg rutkowski and alphonse mucha",
-                "negative_prompt": "disfigured mouth, disfigured teeth, half head, half face, blury, side looking, old, wrinkle, child, no face, pencil, full body, sharp, far away, overlapping, duplication, nude, disfigured, kitsch, oversaturated, grain, low-res, Deformed, blurry, bad anatomy, poorly drawn face, mutation, mutated, extra limb, ugly, poorly drawn hands, missing limb, blurry, floating limbs, disconnected limbs, malformed hands, blur, out of focus, long body, disgusting, poorly drawn, childish, mutilated, mangled, surreal, out of frame, duplicate, 2 faces",
-                "steps": 4,
-                "sampler_name": "DPM++ 2S a Karras"
-            },
-            {
-                "prompt": "wixbs woman frog Batman costume highly detailed face, symmetrical eyes, colorful, flowing hair, fully visible face, powerful, magic, thunders, dramatic lighting, wild, trending on artstation, intricate details, highly detailed, digital painting, concept art, smooth, sharp focus, illustration, art by artgerm and greg rutkowski and alphonse mucha",
-                "negative_prompt": "disfigured mouth, disfigured teeth, half head, half face, blury, side looking, old, wrinkle, child, no face, pencil, full body, sharp, far away, overlapping, duplication, nude, disfigured, kitsch, oversaturated, grain, low-res, Deformed, blurry, bad anatomy, poorly drawn face, mutation, mutated, extra limb, ugly, poorly drawn hands, missing limb, blurry, floating limbs, disconnected limbs, malformed hands, blur, out of focus, long body, disgusting, poorly drawn, childish, mutilated, mangled, surreal, out of frame, duplicate, 2 faces",
-                "steps": 4,
-                "sampler_name": "DPM++ 2S a Karras"
-            }
-        ]
+      "train": {
+        "skip_training": true,
+        "project_id": "clin0ixj000009px01cp38yev",
+        "concept_name": "RWXdoggo",
+        "unet_resolution": 512,
+        "text_learning_rate": 2e-6,
+        "unet_learning_rate": 2e-6,
+        "text_lr_scheduler": "polynomial",
+        "unet_lr_scheduler": "polynomial"
+      },
+      "inference": [
+          {
+            "prompt": "(a photo of RWXdoggo:1.1) in a (space suit:1.1), (spaceship interior:1.1), (seat:0.8) sci-fi, (star wars:0.7), (international space station:0.9), highly detailed, photorealistic, cgi, reflective, trending on artstation, dramatic lighting, moonlight, stars, 35mm, octane render, wide angle",
+            "negative_prompt": "blur, painting, anime, manga, sketch, cropped, car, text, sand, tree, text",
+            "sampler_name": "Euler a",
+            "batch_size": 4,
+            "enable_hr": true,
+            "denoising_strength": 0.25,
+            "hr_scale": 2,
+            "hr_second_pass_steps": 10,
+            "hr_upscaler": "4x-UltraSharp",
+            "hr_resize_x": 1024,
+            "hr_resize_y": 1024,
+            "width": 512,
+            "height": 512,          
+            "steps": 35,
+            "cfg_scale": 5
+          }
+      ]
+    },
+    "s3Config": {
+        "accessId": "AL1R24L5X0BJSAZ31UUI",
+        "accessSecret": "Y7OvBCwc5MNuOmCGFY4n2jdnv8zqOtvZto2lPyCq",
+        "bucketName": "petsome-ai",
+        "endpointUrl": "https://ams1.vultrobjects.com"
     }
 }
